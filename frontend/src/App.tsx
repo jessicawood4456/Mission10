@@ -1,12 +1,10 @@
 import './App.css';
-import Welcome from './Welcome';
-import Bowlers from './Bowlers';
+import News from './News';
 
 function App() {
   return (
     <>
-      <Welcome />
-      <Bowlers />
+      <News />
     </>
   );
 }
