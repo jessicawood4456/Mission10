@@ -1,12 +1,20 @@
 // src/ContentRecommender.tsx
+import React, { useEffect, useState } from 'react';
 
-import React, { useState } from 'react';
+type ContentRecommenderProps = {
+  contentId: string;  // This will now directly be the itemId
+};
 
-const ContentRecommender = () => {
-  const [contentId, setContentId] = useState('');
+const ContentRecommender: React.FC<ContentRecommenderProps> = ({ contentId }) => {
   const [recommendations, setRecommendations] = useState<string[]>([]);
 
-  const fetchRecommendations = async () => {
+  useEffect(() => {
+    if (contentId) {
+      fetchRecommendations(contentId);
+    }
+  }, [contentId]);
+
+  const fetchRecommendations = async (contentId: string) => {
     try {
       const res = await fetch(
         `http://127.0.0.1:5000/api/recommend/content/${contentId}`
@@ -19,26 +27,18 @@ const ContentRecommender = () => {
   };
 
   return (
-    <>
-      <div className="recommender">
-        <h2>Content-Based Recommendations</h2>
-        <input
-          type="text"
-          value={contentId}
-          onChange={(e) => setContentId(e.target.value)}
-          placeholder="Enter contentId"
-        />
-        <button onClick={fetchRecommendations}>Get Recommendations</button>
-
-        {recommendations.length > 0 && (
-          <ul>
-            {recommendations.map((recId, idx) => (
-              <li key={idx}>{recId}</li>
-            ))}
-          </ul>
-        )}
-      </div>
-    </>
+    <div className="recommender">
+      <h2>Content-Based Recommendations</h2>
+      {recommendations.length > 0 ? (
+        <ul>
+          {recommendations.map((recId, idx) => (
+            <li key={idx}>{recId}</li>
+          ))}
+        </ul>
+      ) : (
+        <p>No recommendations available.</p>
+      )}
+    </div>
   );
 };
 
