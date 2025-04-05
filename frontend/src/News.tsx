@@ -3,18 +3,15 @@ import './App.css';
 
 // ✅ Only use IDs that exist in the content-based dataset
 const itemIds = [
-    "-4.11035E+18",
-    "-7.29229E+18",
-    "-6.15185E+18",
-    "2.44803E+18",
-    "-2.82657E+18",
-    "-2.1489E+18",
-    "4.11919E+18",
-    "-7.92602E+18",
-  ];
-  
-
-
+  '-4.11035E+18',
+  '-7.29229E+18',
+  '-6.15185E+18',
+  '2.44803E+18',
+  '-2.82657E+18',
+  '-2.1489E+18',
+  '4.11919E+18',
+  '-7.92602E+18',
+];
 
 type CsvRec = {
   [key: string]: string;
@@ -44,18 +41,18 @@ const NewsRecommender = () => {
   };
 
   useEffect(() => {
-    fetch("/collab_recommendations.csv")
+    fetch('/collab_recommendations.csv')
       .then((res) => res.text())
       .then((text) => setCfData(parseCSVWithId(text)));
 
-    fetch("/content_filtering_recommendations.csv")
+    fetch('/content_filtering_recommendations.csv')
       .then((res) => res.text())
       .then((text) => {
         const parsed = parseCSVWithId(text);
         setCbData(parsed);
 
-        const ids = parsed.map((row) => row["contentId"]);
-        console.log("Parsed contentIds:", ids);
+        const ids = parsed.map((row) => row['contentId']);
+        console.log('Parsed contentIds:', ids);
       });
   }, []);
 
@@ -75,17 +72,18 @@ const NewsRecommender = () => {
       setCfRecs(cfRow ? Object.values(cfRow).slice(1) : []);
 
       // Content-Based Filtering
-      const cbRow = cbData.find((row) => row["contentId"] === selectedItemId);
+      const cbRow = cbData.find((row) => row['contentId'] === selectedItemId);
 
       if (!cbRow) {
         setCbRecs([]);
-        throw new Error("Matching contentId not found");
+        throw new Error('Matching contentId not found');
       }
 
       const similarityScores = { ...cbRow };
-      delete similarityScores["contentId"];
+      delete similarityScores['contentId'];
 
       const sorted = Object.entries(similarityScores)
+        .filter(([id]) => id !== selectedItemId) // 👈 filter out itself
         .sort((a, b) => parseFloat(b[1]) - parseFloat(a[1]))
         .slice(0, 5)
         .map(([id]) => id);
@@ -112,7 +110,8 @@ const NewsRecommender = () => {
           </option>
         ))}
       </select>
-      <br /><br />
+      <br />
+      <br />
       <button onClick={getRecommendations} disabled={loading}>
         Get Recommendations
       </button>
