@@ -6,7 +6,7 @@ from flask_cors import CORS
 app = Flask(__name__)
 CORS(app)  # this allows requests from React
 
-import os
+import osgit
 base_path = os.path.dirname(__file__)
 
 df_content = pd.read_csv(os.path.join(base_path, "content_filtering_recommendations.csv"), index_col=0)

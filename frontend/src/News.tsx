@@ -1,63 +1,96 @@
 import React, { useState, useEffect } from 'react';
 import './App.css';
-import ContentRecommender from './ContentRecommender';  // Import the ContentRecommender component
 
-// Hardcoded item IDs
+// ✅ Only use IDs that exist in the content-based dataset
 const itemIds = [
-  -9222795471790223670, -9216926795620865886, -9194572880052200111,
-  -9192549002213406534, -9190737901804729417, 
-  -9184137057748005562, -9176143510534135851, -9172673334835262304,
-  -9171475473795142532,
-];
+    "-4.11035E+18",
+    "-7.29229E+18",
+    "-6.15185E+18",
+    "2.44803E+18",
+    "-2.82657E+18",
+    "-2.1489E+18",
+    "4.11919E+18",
+    "-7.92602E+18",
+  ];
+  
+
+
 
 type CsvRec = {
-  'Recommendation 1': string;
-  'Recommendation 2': string;
-  'Recommendation 3': string;
-  'Recommendation 4': string;
-  'Recommendation 5': string;
+  [key: string]: string;
 };
 
-const App = () => {
+const NewsRecommender = () => {
   const [selectedItemId, setSelectedItemId] = useState<string>('');
   const [cfRecs, setCfRecs] = useState<string[]>([]);
+  const [cbRecs, setCbRecs] = useState<string[]>([]);
   const [cfData, setCfData] = useState<CsvRec[]>([]);
+  const [cbData, setCbData] = useState<CsvRec[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  // Function to parse the CSV data
-  const parseCSV = (csvText: string): CsvRec[] => {
+  const parseCSVWithId = (csvText: string): CsvRec[] => {
     const lines = csvText.trim().split('\n');
     const headers = lines[0].split(',');
     return lines.slice(1).map((line) => {
       const values = line.split(',');
-      const record: any = {};
-      headers.forEach((header, i) => {
-        record[header] = values[i];
-      });
-      return record;
+      const rowId = values[0];
+      const rowData: CsvRec = { contentId: rowId };
+      for (let i = 1; i < headers.length; i++) {
+        rowData[headers[i]] = values[i];
+      }
+      return rowData;
     });
   };
 
   useEffect(() => {
-    fetch("/collab_recommendations.csv") // Adjusted to match the CSV file name and location
+    fetch("/collab_recommendations.csv")
       .then((res) => res.text())
-      .then((text) => setCfData(parseCSV(text)));
+      .then((text) => setCfData(parseCSVWithId(text)));
+
+    fetch("/content_filtering_recommendations.csv")
+      .then((res) => res.text())
+      .then((text) => {
+        const parsed = parseCSVWithId(text);
+        setCbData(parsed);
+
+        const ids = parsed.map((row) => row["contentId"]);
+        console.log("Parsed contentIds:", ids);
+      });
   }, []);
 
   const handleSelectItem = (e: React.ChangeEvent<HTMLSelectElement>) => {
     setSelectedItemId(e.target.value);
   };
 
-  const getRecommendations = async () => {
+  const getRecommendations = () => {
     setLoading(true);
     setError('');
+
     try {
-      const index = itemIds.indexOf(Number(selectedItemId));
+      const index = itemIds.indexOf(selectedItemId);
 
       // Collaborative Filtering
       const cfRow = cfData[index];
-      setCfRecs(cfRow ? Object.values(cfRow) : []);
+      setCfRecs(cfRow ? Object.values(cfRow).slice(1) : []);
+
+      // Content-Based Filtering
+      const cbRow = cbData.find((row) => row["contentId"] === selectedItemId);
+
+      if (!cbRow) {
+        setCbRecs([]);
+        throw new Error("Matching contentId not found");
+      }
+
+      const similarityScores = { ...cbRow };
+      delete similarityScores["contentId"];
+
+      const sorted = Object.entries(similarityScores)
+        .sort((a, b) => parseFloat(b[1]) - parseFloat(a[1]))
+        .slice(0, 5)
+        .map(([id]) => id);
+
+      setCbRecs(sorted);
     } catch (err) {
       console.error(err);
       setError('Something went wrong. Please check your input.');
@@ -74,38 +107,47 @@ const App = () => {
       <select value={selectedItemId} onChange={handleSelectItem}>
         <option value="">-- Select an Item --</option>
         {itemIds.map((id) => (
-          <option key={id} value={id.toString()}>
+          <option key={id} value={id}>
             {id}
           </option>
         ))}
       </select>
-      <br />
-      <br />
+      <br /><br />
       <button onClick={getRecommendations} disabled={loading}>
-        Get Collaborative Filtering Recommendations
+        Get Recommendations
       </button>
 
       {error && <p style={{ color: 'red' }}>{error}</p>}
 
-      <div>
-        <h2>Collaborative Filtering</h2>
-        {cfRecs.length > 0 && (
-          <>
-            <p><strong>If you watched:</strong> {cfRecs[0]}</p>
-            <h5>Top Recommendations:</h5>
+      <div style={{ display: 'flex', gap: '50px', marginTop: '30px' }}>
+        <div>
+          <h2>Collaborative Filtering</h2>
+          {cfRecs.length > 0 ? (
             <ol>
-              {cfRecs.slice(1).map((id, idx) => (
-                <li key={idx}>{id}</li>
+              {cfRecs.map((rec, idx) => (
+                <li key={idx}>{rec}</li>
               ))}
             </ol>
-          </>
-        )}
-      </div>
+          ) : (
+            <p>No recommendations yet.</p>
+          )}
+        </div>
 
-      {/* Content Recommender */}
-      <ContentRecommender contentId={selectedItemId} />
+        <div>
+          <h2>Content-Based Filtering</h2>
+          {cbRecs.length > 0 ? (
+            <ol>
+              {cbRecs.map((rec, idx) => (
+                <li key={idx}>{rec}</li>
+              ))}
+            </ol>
+          ) : (
+            <p>No recommendations yet.</p>
+          )}
+        </div>
+      </div>
     </div>
   );
 };
 
-export default App;
+export default NewsRecommender;
